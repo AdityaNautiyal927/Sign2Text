@@ -5,12 +5,10 @@ import requests
 from pathlib import Path
 import shutil
 
-# Configuration
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "data" / "raw"
 WORDS_DIR = DATA_DIR / "asl_words"
 
-# Create directories
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 def check_kaggle_cli():
@@ -62,8 +60,7 @@ def setup_kaggle_auth():
             print(f"   {location}")
     
     input("\nPress Enter after you've set up kaggle.json...")
-    
-    # Check again
+
     for location in possible_locations:
         if location and location.exists():
             try:
@@ -145,12 +142,10 @@ def download_asl_words_datasets():
 def find_word_folders():
     """Find and organize word folders from downloaded datasets."""
     word_folders = []
-    
-    # Search in downloaded data
+
     if WORDS_DIR.exists():
         for root, dirs, files in os.walk(WORDS_DIR):
             for dir_name in dirs:
-                # Skip common non-word directories
                 if dir_name.lower() not in ['images', 'train', 'test', 'val', 'temp', '__pycache__']:
                     
                     if len(dir_name) > 1 and any(c.isalpha() for c in dir_name):
@@ -171,8 +166,7 @@ def organize_word_data():
         return 0
     
     print(f"\nFound {len(word_folders)} potential word classes:")
-    
-    # Common ASL words to prioritize
+
     priority_words = {
         'hello', 'thanks', 'yes', 'no', 'please', 'sorry', 'you', 'me', 'love',
         'help', 'stop', 'go', 'good', 'bad', 'more', 'finish', 'want', 'need'
@@ -190,7 +184,6 @@ def organize_word_data():
         if clean_word in {'del', 'nothing', 'space', 'blank'}:
             continue
         
-        # Prioritize common words or include all
         if not priority_words or clean_word in priority_words:
             print(f"  Organizing: {clean_word} ({image_count} images)")
             
@@ -211,20 +204,16 @@ def create_updated_prepare_script():
     prepare_script = BASE_DIR / "prepare_combined.py"
     
     if prepare_script.exists():
-        # Read the current script
         with open(prepare_script, 'r') as f:
             content = f.read()
         
-        # Update words path to point to organized words
         organized_words_path = str(WORDS_DIR / "organized").replace('\\', '\\\\')
         
-        # Replace the words_path line
         new_content = content.replace(
             'words_path = r"C:\\Users\\SUMAN\\Desktop\\sign2text\\data\\raw\\asl_words\\images\\train"',
             f'words_path = r"{organized_words_path}"'
         )
         
-        # Write back
         with open(prepare_script, 'w') as f:
             f.write(new_content)
         
@@ -273,7 +262,6 @@ def main():
     # Step 5: Update prepare script
     create_updated_prepare_script()
     
-    # Summary
     print(f"\n" + "="*60)
     print("DOWNLOAD COMPLETE")
     print("="*60)
@@ -289,7 +277,6 @@ def main():
     print()
     print("Your model will now recognize both letters A-Z AND common words!")
     
-    # Show the expected structure
     print(f"\nEXPECTED DATA STRUCTURE:")
     print(f"  {BASE_DIR}")
     print(f"  ├── data/")

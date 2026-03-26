@@ -6,16 +6,14 @@ import joblib
 from collections import deque, Counter
 import time
 
-# Simple, reliable configuration
-IMG_SIZE = (64, 64)  # Match training exactly
+IMG_SIZE = (64, 64)  
 ROOT_DIR = Path(__file__).resolve().parents[1]
 MODEL_DIR = ROOT_DIR / "data" / "models"
 
-# Much more lenient settings
 PREDICTION_WINDOW = 8
-MIN_CONFIDENCE = 0.15    # Very low - your model gives low confidences
-STABLE_FRAMES_NEEDED = 5  # Frames to consider prediction stable
-BOOST_FACTOR = 3.0       # Aggressive confidence boost for display
+MIN_CONFIDENCE = 0.15   
+STABLE_FRAMES_NEEDED = 5  
+BOOST_FACTOR = 3.0       
 
 class SimpleASLRecognizer:
     def __init__(self):
@@ -26,7 +24,6 @@ class SimpleASLRecognizer:
         self.fps = 0
         self.show_debug = True
         
-        # Load model and classes
         self.load_model_and_classes()
         
         print("Simple ASL Recognizer - Focus on Basic Functionality")
@@ -35,7 +32,6 @@ class SimpleASLRecognizer:
 
     def load_model_and_classes(self):
         """Load model and classes with simple fallback."""
-        # Find model file
         model_paths = [
             MODEL_DIR / "best_model.keras",
             MODEL_DIR / "sign_model.keras",
@@ -52,7 +48,6 @@ class SimpleASLRecognizer:
         if not self.model_path:
             raise FileNotFoundError("No model found. Run train_combined.py first.")
         
-        # Find classes
         class_paths = [
             MODEL_DIR / "class_names.joblib",
             "class_names.joblib"
@@ -67,7 +62,6 @@ class SimpleASLRecognizer:
         if not self.classes_path:
             raise FileNotFoundError("No classes found. Run train_combined.py first.")
         
-        # Load
         self.model = load_model(self.model_path)
         self.class_names = joblib.load(self.classes_path)
         
@@ -77,19 +71,16 @@ class SimpleASLRecognizer:
     def simple_preprocess(self, roi):
         """Minimal preprocessing - just match training format exactly."""
         try:
-            # Convert BGR to RGB
+
             if len(roi.shape) == 3:
                 rgb = cv2.cvtColor(roi, cv2.COLOR_BGR2RGB)
             else:
                 rgb = cv2.cvtColor(roi, cv2.COLOR_GRAY2RGB)
             
-            # Resize exactly like training
             resized = cv2.resize(rgb, IMG_SIZE, interpolation=cv2.INTER_AREA)
             
-            # Normalize exactly like training: [0,1] range
             normalized = resized.astype(np.float32) / 255.0
-            
-            # Add batch dimension
+
             batch = np.expand_dims(normalized, axis=0)
             
             return batch
@@ -104,10 +95,8 @@ class SimpleASLRecognizer:
             return "ERROR", 0.0, []
         
         try:
-            # Get raw predictions
             predictions = self.model.predict(processed, verbose=0)[0]
-            
-            # Get top 5 predictions
+
             top_indices = np.argsort(predictions)[-5:][::-1]
             top_predictions = []
             
@@ -115,7 +104,6 @@ class SimpleASLRecognizer:
                 if idx < len(self.class_names):
                     class_name = self.class_names[idx]
                     raw_confidence = float(predictions[idx])
-                    # Boost confidence for display only
                     display_confidence = min(1.0, raw_confidence * BOOST_FACTOR)
                     top_predictions.append((class_name, display_confidence))
             
@@ -136,43 +124,36 @@ class SimpleASLRecognizer:
         if len(self.prediction_history) < 3:
             return None, 0.0
         
-        # Get recent predictions (exclude error states)
         valid_preds = [p for p in self.prediction_history if p not in ["ERROR", "UNKNOWN"]]
         
         if len(valid_preds) < 3:
             return None, 0.0
         
-        # Simple majority vote
         pred_counts = Counter(valid_preds)
         most_common = pred_counts.most_common(1)[0]
         prediction = most_common[0]
         count = most_common[1]
-        
-        # Calculate stability (how consistent recent predictions are)
+
         stability = count / len(valid_preds)
-        confidence = min(1.0, stability * 0.8 + 0.2)  # Base confidence from stability
+        confidence = min(1.0, stability * 0.8 + 0.2)  
         
         return prediction, confidence
 
     def draw_simple_ui(self, frame, roi_coords, prediction, confidence, top_predictions):
         """Simple, clear UI."""
         x1, y1, x2, y2 = roi_coords
-        
-        # Always draw green box (system active)
+
         cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
-        
-        # Simple status panel
+
         panel_height = 150
         cv2.rectangle(frame, (0, 0), (frame.shape[1], panel_height), (0, 0, 0), -1)
         
         y_pos = 25
         
-        # Current prediction
         pred_text = f"CURRENT: {prediction} ({confidence:.3f})"
         cv2.putText(frame, pred_text, (10, y_pos), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
         y_pos += 30
         
-        # Stable prediction
         stable_pred, stable_conf = self.get_stable_prediction()
         if stable_pred:
             stable_text = f"STABLE: {stable_pred} ({stable_conf:.3f})"
@@ -182,17 +163,14 @@ class SimpleASLRecognizer:
             cv2.putText(frame, "STABLE: Building...", (10, y_pos), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (128, 128, 128), 2)
         y_pos += 30
         
-        # Sentence
         sentence_display = self.sentence if len(self.sentence) < 60 else "..." + self.sentence[-57:]
         sentence_text = f"SENTENCE: {sentence_display}"
         cv2.putText(frame, sentence_text, (10, y_pos), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 0), 2)
         y_pos += 25
         
-        # FPS and history
         history_text = f"FPS: {self.fps:.1f} | History: {len(self.prediction_history)}/{PREDICTION_WINDOW}"
         cv2.putText(frame, history_text, (10, y_pos), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (200, 200, 200), 1)
         
-        # Debug: Show top predictions
         if self.show_debug and top_predictions:
             debug_x = frame.shape[1] - 250
             debug_y = 25
@@ -205,7 +183,6 @@ class SimpleASLRecognizer:
                 cv2.putText(frame, pred_text, (debug_x, debug_y), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1)
                 debug_y += 18
         
-        # Show ROI in corner for debugging
         if self.show_debug:
             try:
                 roi_display = frame[y1:y2, x1:x2]
@@ -215,8 +192,7 @@ class SimpleASLRecognizer:
                     cv2.putText(frame, "ROI", (15, frame.shape[0]-115), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1)
             except:
                 pass
-        
-        # Help text
+
         help_y = frame.shape[0] - 60
         cv2.rectangle(frame, (0, help_y-5), (frame.shape[1], frame.shape[0]), (0, 0, 0), -1)
         
@@ -248,9 +224,8 @@ class SimpleASLRecognizer:
                 if not ret:
                     break
                 
-                frame = cv2.flip(frame, 1)  # Mirror view
-                
-                # Simple center ROI extraction
+                frame = cv2.flip(frame, 1)  
+
                 height, width = frame.shape[:2]
                 roi_size = min(height, width) // 2
                 center_x, center_y = width // 2, height // 2
@@ -262,14 +237,11 @@ class SimpleASLRecognizer:
                 
                 roi = frame[y1:y2, x1:x2]
                 roi_coords = (x1, y1, x2, y2)
-                
-                # Always predict - no hand detection filtering
+
                 prediction, confidence, top_predictions = self.predict_sign(roi)
-                
-                # Add to history
+
                 self.prediction_history.append(prediction)
-                
-                # Update FPS
+
                 frame_count += 1
                 elapsed = time.time() - start_time
                 if elapsed > 1.0:
@@ -277,12 +249,11 @@ class SimpleASLRecognizer:
                     frame_count = 0
                     start_time = time.time()
                 
-                # Draw UI
                 self.draw_simple_ui(frame, roi_coords, prediction, confidence, top_predictions)
                 
                 cv2.imshow('Simple ASL Recognition - Basic Function Test', frame)
                 
-                # Handle keys
+
                 key = cv2.waitKey(1) & 0xFF
                 
                 if key == ord('q') or key == 27:
@@ -298,7 +269,7 @@ class SimpleASLRecognizer:
                     if stable_pred and stable_conf > 0.5:
                         self.sentence += stable_pred
                         print(f"Added '{stable_pred}': '{self.sentence}'")
-                        self.prediction_history.clear()  # Reset for next sign
+                        self.prediction_history.clear()  
                     else:
                         print(f"Not stable enough: {stable_pred} ({stable_conf:.3f})")
                 elif key == ord('r'):
@@ -308,7 +279,6 @@ class SimpleASLRecognizer:
                     self.show_debug = not self.show_debug
                     print(f"Debug: {'ON' if self.show_debug else 'OFF'}")
                 elif key == ord('t'):
-                    # Test mode - show raw model outputs
                     if top_predictions:
                         print("\nRAW MODEL OUTPUT:")
                         for i, (cls, conf) in enumerate(top_predictions):

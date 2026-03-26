@@ -1,4 +1,3 @@
-# utils.py
 import mediapipe as mp
 import numpy as np
 
@@ -13,14 +12,11 @@ def extract_landmarks_from_results(results):
     if not results.multi_hand_landmarks:
         return None
     hand = results.multi_hand_landmarks[0]
-    # Get raw normalized coords
-    lms = [(lm.x, lm.y, lm.z) for lm in hand.landmark]  # 21 tuples
-    # Convert to numpy and make relative to wrist (index 0)
+    lms = [(lm.x, lm.y, lm.z) for lm in hand.landmark]  
     arr = np.array(lms, dtype=np.float32)
-    base = arr[0]  # wrist
-    rel = arr - base  # translation invariance
-    # Optionally normalize scale by max absolute coordinate
+    base = arr[0]  
+    rel = arr - base  
     max_val = np.max(np.abs(rel))
     if max_val > 0:
         rel = rel / max_val
-    return rel.flatten().tolist()  # length 63
+    return rel.flatten().tolist()  

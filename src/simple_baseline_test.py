@@ -6,9 +6,6 @@ import numpy as np
 from pathlib import Path
 import matplotlib.pyplot as plt
 
-# ==============================
-# Simple Baseline Test
-# ==============================
 ROOT_DIR = Path(__file__).resolve().parents[1]
 DATA_DIR = ROOT_DIR / "data" / "combined"
 MODEL_DIR = ROOT_DIR / "data" / "models"
@@ -16,17 +13,13 @@ MODEL_DIR = ROOT_DIR / "data" / "models"
 print("🧪 Testing with SUPER SIMPLE baseline model...")
 print("This will help identify if the issue is with data or model complexity")
 
-# Very simple parameters
-IMG_SIZE = (32, 32)  # Very small for fast testing
+IMG_SIZE = (32, 32)  
 BATCH_SIZE = 32
 EPOCHS = 10
 
-# ==============================
-# Load Data (Simple)
-# ==============================
 train_ds = tf.keras.preprocessing.image_dataset_from_directory(
     DATA_DIR,
-    validation_split=0.3,  # More validation data
+    validation_split=0.3,  
     subset="training",
     seed=123,
     image_size=IMG_SIZE,
@@ -48,13 +41,11 @@ class_names = train_ds.class_names
 num_classes = len(class_names)
 print(f"📊 Found {num_classes} classes: {class_names[:5]}..." if len(class_names) > 5 else class_names)
 
-# ==============================
-# Data Analysis
-# ==============================
+
 def quick_data_check():
     print("\n🔍 Quick Data Analysis:")
     
-    # Check one batch
+
     for images, labels in train_ds.take(1):
         print(f"  Batch shape: {images.shape}")
         print(f"  Image dtype: {images.dtype}")
@@ -66,15 +57,11 @@ def quick_data_check():
 
 quick_data_check()
 
-# ==============================
-# Ultra Simple Model
-# ==============================
 def create_ultra_simple_model():
     """The simplest possible model that should still work."""
     model = keras.Sequential([
         layers.Rescaling(1./255, input_shape=(IMG_SIZE[0], IMG_SIZE[1], 3)),
         
-        # Just two layers!
         layers.Conv2D(16, 3, activation='relu'),
         layers.MaxPooling2D(),
         layers.Flatten(),
@@ -93,14 +80,11 @@ model.compile(
 print(f"\n🏗️  Ultra-simple model created:")
 model.summary()
 
-# ==============================
-# Quick Training Test
-# ==============================
+
 print(f"\n🚀 Testing training for {EPOCHS} epochs...")
 print("If this fails, the issue is with your data, not model complexity!")
 
 try:
-    # No callbacks - let it run full epochs
     history = model.fit(
         train_ds,
         validation_data=val_ds, 
@@ -127,9 +111,7 @@ except Exception as e:
     print(f"❌ Simple training failed: {e}")
     print("💡 This confirms there's a fundamental issue with your data setup.")
 
-# ==============================
-# Sample Visualization (Optional)
-# ==============================
+
 def visualize_samples():
     """Show some sample images to verify they look correct."""
     try:
