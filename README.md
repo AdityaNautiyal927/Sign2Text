@@ -81,6 +81,8 @@ Install dependencies:
 
 pip install -r requirements.txt
 ▶️ Run the Project
+ cd src
+ python realtime_combined.py
 
 Train the model:
 
